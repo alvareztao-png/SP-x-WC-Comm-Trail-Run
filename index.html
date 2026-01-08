@@ -63,9 +63,7 @@ a.download:hover {
 <canvas id="canvas" width="1080" height="1350" style="display:none;"></canvas>
 
 <script>
-// =======================
-// VARIABLES
-// =======================
+// --- VARIABLES ---
 let participants = [];
 let template = new Image();
 
@@ -73,27 +71,20 @@ let template = new Image();
 fetch("data/participants.json")
   .then(res => res.json())
   .then(data => participants = data)
-  .catch(err => alert("Error loading participant list"));
+  .catch(err => alert("Error loading participant list: " + err));
 
 // Load template image
 template.src = "assets/template.png";
 
-// =======================
-// EXACT MATCH
-// =======================
+// --- EXACT MATCH FUNCTION ---
 function exactMatch(input, list){
   return list.find(p => p.name.toLowerCase() === input.toLowerCase()) || null;
 }
 
-// =======================
-// GENERATE E-BIB
-// =======================
+// --- GENERATE FUNCTION ---
 function generate(){
   const inputName = document.getElementById("nameInput").value.trim();
-  if(!inputName){
-    alert("Please enter your name");
-    return;
-  }
+  if(!inputName){ alert("Please enter your name"); return; }
 
   const match = exactMatch(inputName, participants);
   const bibNumber = match ? match.bib : Math.floor(1000 + Math.random()*9000);
@@ -101,12 +92,13 @@ function generate(){
 
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
-  canvas.style.display = "block";
+  canvas.style.display = "block"; // show canvas after generation
 
+  // Ensure template is loaded before drawing
   if (!template.complete) {
-    template.onload = drawCanvas;
+      template.onload = () => drawCanvas();
   } else {
-    drawCanvas();
+      drawCanvas();
   }
 
   function drawCanvas(){
@@ -114,74 +106,51 @@ function generate(){
     ctx.drawImage(template,0,0,canvas.width,canvas.height);
 
     ctx.textAlign = "center";
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = "#000"; // Black text
 
-    // =======================
-    // BIB NUMBER (SIZE 200)
-    // =======================
-    ctx.font = "bold 200px 'Anton', sans-serif";
+    // BIB NUMBER
+    ctx.font = "bold 180px 'Anton', sans-serif";
+    ctx.fillText(bibNumber, canvas.width/2, canvas.height/2);
 
-    const bibY = match 
-      ? canvas.height / 2 
-      : canvas.height / 2 + 25;
+    // PARTICIPANT NAME
+    ctx.font = "bold 80px 'Anton', sans-serif";
+    if(displayName) ctx.fillText(displayName, canvas.width/2, canvas.height/2 + 150);
 
-    ctx.fillText(bibNumber, canvas.width / 2, bibY);
-
-    // =======================
-    // NAME
-    // =======================
-    if(displayName){
-      ctx.font = "bold 80px 'Anton', sans-serif";
-      ctx.fillText(displayName, canvas.width / 2, bibY + 150);
-    }
-
-    // =======================
-    // DOWNLOAD HANDLING
-    // =======================
+    // Setup download link
     const downloadLink = document.getElementById("downloadLink");
     downloadLink.style.display = "inline-block";
 
+    // Remove previous click handler to avoid duplicates
     const newDownloadLink = downloadLink.cloneNode(true);
     downloadLink.parentNode.replaceChild(newDownloadLink, downloadLink);
 
-    newDownloadLink.onclick = function(){
-      const imgData = canvas.toDataURL("image/png");
+    newDownloadLink.onclick = function(e){
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
       if(isIOS){
+        const imgData = canvas.toDataURL("image/png");
         const w = window.open();
-        w.document.write(
-          '<img src="'+imgData+'" style="max-width:100%;height:auto;display:block;margin:20px auto;">'
-        );
-        return false;
+        w.document.write('<img src="'+imgData+'" style="max-width:100%;height:auto;display:block;margin:20px auto;">');
+        return false; // prevent default
       } else {
-        newDownloadLink.href = imgData;
-        newDownloadLink.download =
-          `eBIB_${bibNumber}_${displayName.replace(/\s+/g,"_") || "guest"}.png`;
+        newDownloadLink.href = canvas.toDataURL("image/png");
+        newDownloadLink.download = `eBIB_${bibNumber}_${displayName.replace(/\s+/g,"_") || "guest"}.png`;
       }
     };
   }
 }
 
-// Generate button
+// Attach generate function to button
 document.getElementById("generateBtn").addEventListener("click", generate);
 
-// =======================
-// VIEW BUTTON
-// =======================
+// --- VIEW BUTTON ---
 document.getElementById("viewBtn").addEventListener("click", function(){
   const canvas = document.getElementById("canvas");
-  if(canvas.style.display === "none"){
-    alert("Please generate your e-BIB first.");
-    return;
-  }
-
+  if(canvas.style.display === "none") return alert("Please generate your e-BIB first.");
+  
   const imgData = canvas.toDataURL("image/png");
   const w = window.open();
   w.document.write('<title>Your e-BIB</title>');
-  w.document.write(
-    '<img src="'+imgData+'" style="max-width:100%;height:auto;display:block;margin:20px auto;">'
-  );
+  w.document.write('<img src="'+imgData+'" style="max-width:100%;height:auto;display:block;margin:20px auto;">');
 });
 </script>
 
